@@ -1,0 +1,41 @@
+# OpenClaw Fly.io micro-VM deployment configuration
+# Suitable for lightweight / low-cost machines (shared-cpu-1x, 512 MB).
+# See https://fly.io/docs/reference/configuration/
+#
+# Deploy:
+#   fly deploy --config fly.micro.toml
+
+app = "openclaw-micro"
+primary_region = "iad" # change to your closest region
+
+[build]
+dockerfile = "Dockerfile"
+
+[env]
+NODE_ENV = "production"
+OPENCLAW_PREFER_PNPM = "1"
+OPENCLAW_STATE_DIR = "/data"
+# Keep the V8 heap within the 512 MB container limit.
+NODE_OPTIONS = "--max-old-space-size=384"
+# Lower concurrency defaults for the reduced CPU/memory footprint.
+OPENCLAW_AGENT_MAX_CONCURRENT = "2"
+OPENCLAW_SUBAGENT_MAX_CONCURRENT = "4"
+
+[processes]
+app = "node openclaw.mjs gateway --allow-unconfigured --port 3000 --bind lan"
+
+[http_service]
+internal_port = 3000
+force_https = true
+auto_stop_machines = true  # stop idle micro VMs to save cost
+auto_start_machines = true
+min_machines_running = 0   # allow full scale-to-zero
+processes = ["app"]
+
+[[vm]]
+size = "shared-cpu-1x"
+memory = "512mb"
+
+[mounts]
+source = "openclaw_micro_data"
+destination = "/data"
