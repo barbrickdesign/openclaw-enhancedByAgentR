@@ -1,0 +1,49 @@
+# docker-compose.micro.yml — minimal single-service deployment for resource-constrained VMs.
+# Usage:
+#   docker compose -f docker-compose.micro.yml up -d
+#
+# Required env vars (set in a .env file or shell):
+#   OPENCLAW_IMAGE            - built image tag (default: openclaw:local)
+#   OPENCLAW_GATEWAY_TOKEN    - shared gateway auth token
+#   OPENCLAW_CONFIG_DIR       - path to persist ~/.openclaw config
+#
+# Optional:
+#   OPENCLAW_GATEWAY_PORT     - host port (default: 18789)
+#   OPENCLAW_GATEWAY_BIND     - bind mode: lan | loopback (default: lan)
+
+services:
+  openclaw-gateway:
+    image: ${OPENCLAW_IMAGE:-openclaw:local}
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      NODE_OPTIONS: "--max-old-space-size=384"
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      # Tune concurrency down for micro VMs (overrides compiled defaults).
+      OPENCLAW_AGENT_MAX_CONCURRENT: ${OPENCLAW_AGENT_MAX_CONCURRENT:-2}
+      OPENCLAW_SUBAGENT_MAX_CONCURRENT: ${OPENCLAW_SUBAGENT_MAX_CONCURRENT:-4}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR}:/home/node/.openclaw
+    ports:
+      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+    init: true
+    restart: unless-stopped
+    # Hard resource limits suitable for a micro VM (512 MB RAM, 0.5 CPU).
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: 0.50
+        reservations:
+          memory: 128m
+    command:
+      [
+        "node",
+        "openclaw.mjs",
+        "gateway",
+        "--allow-unconfigured",
+        "--bind",
+        "${OPENCLAW_GATEWAY_BIND:-lan}",
+        "--port",
+        "18789",
+      ]
