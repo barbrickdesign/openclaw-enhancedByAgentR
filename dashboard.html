@@ -1,0 +1,2317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenClaw Enhanced Hub</title>
+  <!--
+    ╔══════════════════════════════════════════════════════════════╗
+    ║       OpenClaw Enhanced Hub – Standalone Dashboard           ║
+    ║                                                              ║
+    ║  PASSCODE SETUP:                                             ║
+    ║  1. Open browser console on this page                        ║
+    ║  2. Run: await sha256('your-passcode')                       ║
+    ║  3. Copy the hash and update PASSCODE_HASH below             ║
+    ║                                                              ║
+    ║  Default passcode: "OpenClaw2026"                            ║
+    ║  (SHA-256: 6289f0b932e7bcc5b2c5ed447bbee99fde9e2f156fd15bfd  ║
+    ║             7ddc6d0edf3161e7)                                 ║
+    ╚══════════════════════════════════════════════════════════════╝
+  -->
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+    :root {
+      --bg: #12141a;
+      --bg-accent: #14161d;
+      --bg-elevated: #1a1d25;
+      --bg-hover: #262a35;
+      --card: #181b22;
+      --card-border: #27272a;
+      --text: #e4e4e7;
+      --text-strong: #fafafa;
+      --muted: #71717a;
+      --border: #27272a;
+      --border-strong: #3f3f46;
+      --accent: #ff5c5c;
+      --accent-hover: #ff7070;
+      --accent-subtle: rgba(255,92,92,0.15);
+      --accent-glow: rgba(255,92,92,0.25);
+      --ok: #22c55e;
+      --ok-subtle: rgba(34,197,94,0.12);
+      --warn: #f59e0b;
+      --warn-subtle: rgba(245,158,11,0.12);
+      --danger: #ef4444;
+      --danger-subtle: rgba(239,68,68,0.12);
+      --info: #3b82f6;
+      --info-subtle: rgba(59,130,246,0.12);
+      --teal: #14b8a6;
+      --teal-subtle: rgba(20,184,166,0.12);
+      --font: 'Space Grotesk', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --radius: 8px;
+      --radius-sm: 5px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      height: 100%;
+      min-height: 100vh;
+    }
+
+    /* ── Lock Screen ──────────────────────────────────────────── */
+    #lock-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: var(--bg);
+    }
+
+    .lock-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 0 60px var(--accent-glow);
+    }
+
+    .lock-logo {
+      font-size: 48px;
+      margin-bottom: 8px;
+    }
+
+    .lock-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-strong);
+      margin-bottom: 4px;
+    }
+
+    .lock-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+
+    .lock-input-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .lock-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-strong);
+      font-family: var(--mono);
+      font-size: 16px;
+      letter-spacing: 4px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .lock-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+    .lock-input::placeholder { letter-spacing: normal; font-family: var(--font); font-size: 14px; }
+
+    .lock-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .lock-btn:hover { background: var(--accent-hover); box-shadow: 0 4px 20px var(--accent-glow); }
+
+    .lock-error {
+      color: var(--danger);
+      font-size: 13px;
+      margin-top: 12px;
+      min-height: 20px;
+    }
+
+    /* ── App Shell ────────────────────────────────────────────── */
+    #app { display: none; height: 100vh; flex-direction: column; }
+    #app.visible { display: flex; }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 20px;
+      height: 56px;
+      background: rgba(18,20,26,0.97);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+
+    .app-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text-strong);
+    }
+
+    .app-logo-icon { font-size: 22px; }
+    .app-logo-version { font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 1px; }
+
+    .header-spacer { flex: 1; }
+
+    .conn-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .conn-badge:hover { border-color: var(--border-strong); }
+
+    .conn-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+
+    .conn-dot.connected { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+    .conn-dot.connecting { background: var(--warn); animation: pulse 1.2s infinite; }
+    .conn-dot.error { background: var(--danger); }
+
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .lock-icon-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: var(--radius-sm);
+      padding: 5px 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .lock-icon-btn:hover { color: var(--text); border-color: var(--border-strong); }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .app-body { display: flex; flex: 1; overflow: hidden; }
+
+    .sidebar {
+      width: 200px;
+      background: var(--bg-accent);
+      border-right: 1px solid var(--border);
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .sidebar-group-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 8px 8px 4px;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .nav-btn.active { background: var(--accent-subtle); color: var(--accent); }
+    .nav-btn .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+    }
+
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* ── Tabs ─────────────────────────────────────────────────── */
+    .tab { display: none; }
+    .tab.active { display: block; }
+
+    /* ── Page Title ───────────────────────────────────────────── */
+    .page-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-strong);
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── Cards ────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .stat-value { font-size: 26px; font-weight: 700; color: var(--text-strong); line-height: 1; }
+    .stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Status indicators ────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-ok { background: var(--ok-subtle); color: var(--ok); }
+    .badge-warn { background: var(--warn-subtle); color: var(--warn); }
+    .badge-danger { background: var(--danger-subtle); color: var(--danger); }
+    .badge-info { background: var(--info-subtle); color: var(--info); }
+    .badge-muted { background: var(--bg-elevated); color: var(--muted); }
+    .badge-accent { background: var(--accent-subtle); color: var(--accent); }
+    .badge-teal { background: var(--teal-subtle); color: var(--teal); }
+
+    /* ── Tables ───────────────────────────────────────────────── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .data-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--bg-hover); }
+    .data-table .mono { font-family: var(--mono); font-size: 12px; }
+
+    /* ── Forms ────────────────────────────────────────────────── */
+    .form-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+    .form-label { font-size: 12px; font-weight: 500; color: var(--muted); }
+
+    .form-input, .form-textarea, .form-select {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-subtle);
+    }
+
+    .form-textarea { resize: vertical; min-height: 80px; font-family: var(--mono); font-size: 12px; }
+
+    /* ── Buttons ──────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 2px 12px var(--accent-glow); }
+
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+
+    .btn-ghost {
+      background: none;
+      color: var(--muted);
+      border-color: transparent;
+    }
+    .btn-ghost:hover { color: var(--text); background: var(--bg-hover); }
+
+    .btn-danger {
+      background: none;
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+    .btn-danger:hover { background: var(--danger-subtle); }
+
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Agents ───────────────────────────────────────────────── */
+    .agent-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      transition: border-color 0.2s;
+    }
+
+    .agent-card:hover { border-color: var(--border-strong); }
+    .agent-card.active { border-color: var(--accent); background: var(--accent-subtle); }
+
+    .agent-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .agent-info { flex: 1; min-width: 0; }
+    .agent-name { font-weight: 600; color: var(--text-strong); font-size: 14px; }
+    .agent-id { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .agent-meta { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .agent-actions { display: flex; gap: 6px; }
+
+    /* ── Tasks / Run Panel ────────────────────────────────────── */
+    .task-result {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.6;
+      max-height: 360px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      background: var(--bg-elevated);
+    }
+
+    .task-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .task-dot.running { background: var(--warn); animation: pulse 1.2s infinite; }
+    .task-dot.done { background: var(--ok); }
+    .task-dot.error { background: var(--danger); }
+    .task-dot.pending { background: var(--muted); }
+
+    /* ── Sessions ─────────────────────────────────────────────── */
+    .session-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .session-row:last-child { border-bottom: none; }
+    .session-key { font-family: var(--mono); font-size: 12px; color: var(--text); }
+    .session-preview { font-size: 12px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Logs ─────────────────────────────────────────────────── */
+    .log-viewer {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+      height: 500px;
+      overflow-y: auto;
+    }
+
+    .log-line { margin-bottom: 1px; }
+    .log-line .ts { color: var(--muted); user-select: none; }
+    .log-line .level-info { color: var(--info); }
+    .log-line .level-warn { color: var(--warn); }
+    .log-line .level-error { color: var(--danger); }
+    .log-line .level-debug { color: var(--teal); }
+
+    /* ── Tools Reference ──────────────────────────────────────── */
+    .tool-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .tool-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .tool-header:hover { background: var(--bg-hover); }
+
+    .tool-name {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    .tool-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .tool-chevron { color: var(--muted); transition: transform 0.2s; font-size: 12px; }
+    .tool-card.open .tool-chevron { transform: rotate(180deg); }
+
+    .tool-body {
+      display: none;
+      padding: 0 16px 16px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .tool-card.open .tool-body { display: block; }
+
+    .tool-body code {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--teal);
+    }
+
+    /* ── Cron ─────────────────────────────────────────────────── */
+    .cron-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .cron-row:last-child { border-bottom: none; }
+    .cron-expr { font-family: var(--mono); font-size: 12px; color: var(--teal); }
+
+    /* ── Settings ─────────────────────────────────────────────── */
+    .settings-section {
+      margin-bottom: 28px;
+    }
+    .settings-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-strong);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Divider ──────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
+    }
+
+    /* ── Empty state ──────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      color: var(--muted);
+    }
+    .empty-state .empty-icon { font-size: 32px; margin-bottom: 12px; }
+    .empty-state .empty-msg { font-size: 14px; }
+
+    /* ── Loading ──────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-strong);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ────────────────────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      background: var(--card);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px;
+      max-width: 340px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      animation: slideIn 0.2s ease;
+    }
+
+    .toast.ok { border-left: 3px solid var(--ok); }
+    .toast.error { border-left: 3px solid var(--danger); }
+    .toast.info { border-left: 3px solid var(--info); }
+
+    @keyframes slideIn {
+      from { transform: translateX(40px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ── Overview grid ────────────────────────────────────────── */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .overview-grid { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+    }
+
+    /* ── Agent hierarchy ──────────────────────────────────────── */
+    .hierarchy-tree {
+      padding-left: 0;
+    }
+    .hierarchy-node {
+      margin-bottom: 8px;
+    }
+    .hierarchy-node .children {
+      margin-left: 28px;
+      margin-top: 6px;
+      border-left: 2px solid var(--border);
+      padding-left: 12px;
+    }
+
+    /* ── Scrollbar ────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── Misc ─────────────────────────────────────────────────── */
+    .flex { display: flex; }
+    .flex-1 { flex: 1; }
+    .gap-8 { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .text-muted { color: var(--muted); }
+    .text-strong { color: var(--text-strong); }
+    .text-ok { color: var(--ok); }
+    .text-danger { color: var(--danger); }
+    .text-accent { color: var(--accent); }
+    .mono { font-family: var(--mono); }
+    .ml-auto { margin-left: auto; }
+    .mt-8 { margin-top: 8px; }
+    .mt-16 { margin-top: 16px; }
+    .mb-0 { margin-bottom: 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── Lock Screen ─────────────────────────────────────────────────── -->
+<div id="lock-screen">
+  <div class="lock-box">
+    <div class="lock-logo">🦞</div>
+    <div class="lock-title">OpenClaw Enhanced Hub</div>
+    <div class="lock-subtitle">Enter your access passcode to continue</div>
+    <div class="lock-input-wrap">
+      <input
+        id="lock-input"
+        class="lock-input"
+        type="password"
+        placeholder="Passcode"
+        autocomplete="off"
+        autofocus
+      />
+    </div>
+    <button class="lock-btn" onclick="checkPasscode()">Unlock →</button>
+    <div id="lock-error" class="lock-error"></div>
+  </div>
+</div>
+
+<!-- ── Main App ────────────────────────────────────────────────────── -->
+<div id="app">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-logo">
+      <span class="app-logo-icon">🦞</span>
+      <div>
+        <div>OpenClaw Enhanced Hub</div>
+        <div class="app-logo-version">Enhanced by AgentR</div>
+      </div>
+    </div>
+    <div class="header-spacer"></div>
+    <div class="conn-badge" onclick="showTab('settings')" title="Configure gateway connection">
+      <div class="conn-dot" id="conn-dot"></div>
+      <span id="conn-label">Disconnected</span>
+    </div>
+    <button class="lock-icon-btn" onclick="lockApp()" title="Lock dashboard">🔒</button>
+  </header>
+
+  <!-- Body -->
+  <div class="app-body">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-group-label">Main</div>
+      <button class="nav-btn active" data-tab="overview" onclick="showTab('overview')">
+        <span class="nav-icon">📊</span> Overview
+      </button>
+      <button class="nav-btn" data-tab="agents" onclick="showTab('agents')">
+        <span class="nav-icon">🤖</span> Agents
+        <span class="nav-badge" id="nav-agents-count" style="display:none"></span>
+      </button>
+      <button class="nav-btn" data-tab="tasks" onclick="showTab('tasks')">
+        <span class="nav-icon">⚡</span> Tasks
+      </button>
+      <div class="sidebar-group-label">Data</div>
+      <button class="nav-btn" data-tab="sessions" onclick="showTab('sessions')">
+        <span class="nav-icon">💬</span> Sessions
+      </button>
+      <button class="nav-btn" data-tab="cron" onclick="showTab('cron')">
+        <span class="nav-icon">⏱️</span> Cron Jobs
+      </button>
+      <div class="sidebar-group-label">Reference</div>
+      <button class="nav-btn" data-tab="tools" onclick="showTab('tools')">
+        <span class="nav-icon">🔧</span> Tools
+      </button>
+      <button class="nav-btn" data-tab="logs" onclick="showTab('logs')">
+        <span class="nav-icon">📋</span> Logs
+      </button>
+      <div class="sidebar-group-label">Config</div>
+      <button class="nav-btn" data-tab="settings" onclick="showTab('settings')">
+        <span class="nav-icon">⚙️</span> Settings
+      </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- ── Overview Tab ──────────────────────────────────────── -->
+      <section class="tab active" id="tab-overview">
+        <div class="page-title">Dashboard Overview</div>
+        <div class="page-subtitle">Real-time status of your OpenClaw Enhanced gateway</div>
+
+        <div class="stat-grid" id="overview-stats">
+          <div class="stat-card">
+            <div class="stat-label">Gateway Status</div>
+            <div class="stat-value" id="stat-status" style="font-size:18px">–</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active Agents</div>
+            <div class="stat-value" id="stat-agents">–</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active Sessions</div>
+            <div class="stat-value" id="stat-sessions">–</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Cron Jobs</div>
+            <div class="stat-value" id="stat-cron">–</div>
+          </div>
+        </div>
+
+        <div class="overview-grid">
+          <div>
+            <div class="card">
+              <div class="card-title">Agent Hierarchy</div>
+              <div id="overview-hierarchy">
+                <div class="empty-state">
+                  <div class="empty-icon">🤖</div>
+                  <div class="empty-msg">Connect to gateway to view agent hierarchy</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">Recent Activity</div>
+              <div id="overview-activity">
+                <div class="empty-state">
+                  <div class="empty-icon">📡</div>
+                  <div class="empty-msg">No recent events</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-title">System Health</div>
+              <div id="overview-health">
+                <div class="empty-state">
+                  <div class="empty-icon">💚</div>
+                  <div class="empty-msg">Awaiting connection</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">Quick Actions</div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <button class="btn btn-primary" onclick="showTab('tasks')">
+                  ⚡ Run Agent Task
+                </button>
+                <button class="btn btn-secondary" onclick="refreshAll()">
+                  🔄 Refresh All
+                </button>
+                <button class="btn btn-secondary" onclick="showTab('logs')">
+                  📋 View Live Logs
+                </button>
+                <button class="btn btn-secondary" onclick="showTab('cron')">
+                  ⏱️ Manage Cron
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Agents Tab ────────────────────────────────────────── -->
+      <section class="tab" id="tab-agents">
+        <div class="flex items-center justify-between" style="margin-bottom:20px">
+          <div>
+            <div class="page-title">Agents</div>
+            <div class="page-subtitle">All configured agents — orchestrators, sub-agents, and specialists</div>
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-secondary btn-sm" onclick="loadAgents()">🔄 Refresh</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Orchestrator / Main Agent</div>
+          <div id="agents-main">
+            <div class="empty-state mb-0" style="padding:20px">
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Sub-Agents & Specialists</div>
+          <div id="agents-list">
+            <div class="empty-state" style="padding:20px">
+              <div class="empty-icon">🤖</div>
+              <div class="empty-msg">Connect to gateway to view agents</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Active Sessions by Agent</div>
+          <div id="agents-sessions">
+            <div class="empty-state" style="padding:20px">
+              <div class="empty-icon">💬</div>
+              <div class="empty-msg">No active sessions found</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Tasks Tab ─────────────────────────────────────────── -->
+      <section class="tab" id="tab-tasks">
+        <div class="page-title">Run Tasks</div>
+        <div class="page-subtitle">Send tasks to agents, track automated runs and results</div>
+
+        <div class="card">
+          <div class="card-title">New Agent Task</div>
+          <div class="form-row">
+            <div class="form-group" style="flex:0 0 200px">
+              <label class="form-label">Target Agent</label>
+              <select class="form-select" id="task-agent">
+                <option value="">Select agent…</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:0 0 160px">
+              <label class="form-label">Model Override</label>
+              <input class="form-input" id="task-model" placeholder="e.g. claude-opus-4-5" />
+            </div>
+            <div class="form-group" style="flex:0 0 120px">
+              <label class="form-label">Thinking</label>
+              <select class="form-select" id="task-thinking">
+                <option value="">Default</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label class="form-label">Task / Message</label>
+            <textarea class="form-textarea" id="task-message" placeholder="Describe the task for the agent…" style="min-height:100px"></textarea>
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-primary" onclick="sendTask()" id="task-send-btn">
+              ⚡ Send Task
+            </button>
+            <button class="btn btn-secondary" onclick="clearTaskResult()">Clear</button>
+          </div>
+        </div>
+
+        <div class="card" id="task-result-card" style="display:none">
+          <div class="flex items-center justify-between" style="margin-bottom:12px">
+            <div class="card-title mb-0">Result</div>
+            <span class="badge" id="task-result-status"></span>
+          </div>
+          <div class="task-result" id="task-result-output"></div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between" style="margin-bottom:12px">
+            <div class="card-title mb-0">Task History</div>
+            <button class="btn btn-ghost btn-sm" onclick="clearTaskHistory()">Clear</button>
+          </div>
+          <div id="task-history">
+            <div class="empty-state" style="padding:20px">
+              <div class="empty-icon">⚡</div>
+              <div class="empty-msg">No tasks run yet this session</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Sessions Tab ──────────────────────────────────────── -->
+      <section class="tab" id="tab-sessions">
+        <div class="flex items-center justify-between" style="margin-bottom:20px">
+          <div>
+            <div class="page-title">Sessions</div>
+            <div class="page-subtitle">Active and recent agent conversation sessions</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="loadSessions()">🔄 Refresh</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Active Sessions</div>
+          <div id="sessions-active">
+            <div class="empty-state" style="padding:20px">
+              <div class="empty-icon">💬</div>
+              <div class="empty-msg">No active sessions</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">All Sessions</div>
+          <div id="sessions-list">
+            <div class="empty-state" style="padding:20px">
+              <div class="empty-icon">📚</div>
+              <div class="empty-msg">Connect to view sessions</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Cron Tab ──────────────────────────────────────────── -->
+      <section class="tab" id="tab-cron">
+        <div class="flex items-center justify-between" style="margin-bottom:20px">
+          <div>
+            <div class="page-title">Cron Jobs</div>
+            <div class="page-subtitle">Scheduled tasks and automation timers</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="loadCron()">🔄 Refresh</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Scheduled Jobs</div>
+          <div id="cron-list">
+            <div class="empty-state" style="padding:20px">
+              <div class="empty-icon">⏱️</div>
+              <div class="empty-msg">Connect to view cron jobs</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Quick Add Cron Job</div>
+          <div class="form-row">
+            <div class="form-group" style="flex:0 0 160px">
+              <label class="form-label">Schedule (cron expr)</label>
+              <input class="form-input mono" id="cron-schedule" placeholder="0 9 * * *" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Task / Prompt</label>
+              <input class="form-input" id="cron-task" placeholder="Daily briefing…" />
+            </div>
+            <div class="form-group" style="flex:0 0 160px">
+              <label class="form-label">Agent (optional)</label>
+              <input class="form-input" id="cron-agent" placeholder="main" />
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="addCronJob()">＋ Add Job</button>
+        </div>
+      </section>
+
+      <!-- ── Tools Tab ─────────────────────────────────────────── -->
+      <section class="tab" id="tab-tools">
+        <div class="page-title">Tools Reference</div>
+        <div class="page-subtitle">
+          All built-in OpenClaw tools — <a href="https://docs.openclaw.ai/tools" target="_blank" style="color:var(--accent)">docs.openclaw.ai/tools</a>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">Tool Profiles</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <span class="badge badge-muted">minimal → session_status</span>
+            <span class="badge badge-info">coding → fs + runtime + sessions + memory + image</span>
+            <span class="badge badge-teal">messaging → message + sessions</span>
+            <span class="badge badge-accent">full → all tools</span>
+          </div>
+          <div style="font-size:12px; color:var(--muted);">
+            Configure via <code style="font-family:var(--mono);color:var(--teal)">tools.profile</code> in openclaw.json.
+            Per-agent override: <code style="font-family:var(--mono);color:var(--teal)">agents.list[].tools.profile</code>.
+          </div>
+        </div>
+
+        <div id="tools-list"></div>
+      </section>
+
+      <!-- ── Logs Tab ──────────────────────────────────────────── -->
+      <section class="tab" id="tab-logs">
+        <div class="flex items-center justify-between" style="margin-bottom:20px">
+          <div>
+            <div class="page-title">Live Logs</div>
+            <div class="page-subtitle">Real-time gateway log stream</div>
+          </div>
+          <div class="flex gap-8">
+            <select class="form-select" id="log-level" style="width:100px" onchange="filterLogs()">
+              <option value="">All</option>
+              <option value="error">Error</option>
+              <option value="warn">Warn</option>
+              <option value="info">Info</option>
+              <option value="debug">Debug</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" onclick="clearLogs()">Clear</button>
+            <button class="btn btn-secondary btn-sm" id="log-follow-btn" onclick="toggleLogFollow()">
+              📌 Follow
+            </button>
+          </div>
+        </div>
+        <div class="log-viewer" id="log-viewer">
+          <div class="log-line text-muted">— Waiting for gateway connection —</div>
+        </div>
+      </section>
+
+      <!-- ── Settings Tab ──────────────────────────────────────── -->
+      <section class="tab" id="tab-settings">
+        <div class="page-title">Settings</div>
+        <div class="page-subtitle">Configure gateway connection and dashboard preferences</div>
+
+        <div class="settings-section">
+          <div class="settings-title">Gateway Connection</div>
+          <div class="form-group" style="max-width:480px; margin-bottom:12px">
+            <label class="form-label">Gateway WebSocket URL</label>
+            <input class="form-input mono" id="settings-gateway-url" placeholder="ws://localhost:18789" />
+          </div>
+          <div class="form-group" style="max-width:480px; margin-bottom:16px">
+            <label class="form-label">Auth Token</label>
+            <input class="form-input mono" id="settings-token" type="password" placeholder="Your gateway auth token" />
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-primary" onclick="saveSettings()">Save &amp; Connect</button>
+            <button class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+            <button class="btn btn-danger" onclick="disconnectGateway()">Disconnect</button>
+          </div>
+          <div id="settings-conn-status" style="margin-top:12px;font-size:13px;"></div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-title">Dashboard</div>
+          <div class="form-row" style="max-width:480px">
+            <div class="form-group">
+              <label class="form-label">Poll Interval (seconds)</label>
+              <input class="form-input" id="settings-poll-interval" type="number" min="5" max="300" value="30" />
+            </div>
+            <div class="form-group" style="flex:0 0 160px">
+              <label class="form-label">Auto-refresh</label>
+              <select class="form-select" id="settings-auto-refresh">
+                <option value="1">Enabled</option>
+                <option value="0">Disabled</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-secondary" onclick="saveDashboardSettings()">Save Preferences</button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-title">Security</div>
+          <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">
+            Session is stored in localStorage. Sessions expire after 8 hours of inactivity.
+          </div>
+          <button class="btn btn-danger" onclick="lockApp()">🔒 Lock Dashboard</button>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-title">About</div>
+          <div style="font-size:13px; color:var(--muted); line-height:1.7">
+            <div><strong style="color:var(--text)">OpenClaw Enhanced Hub</strong> — Advanced control panel for OpenClaw gateway.</div>
+            <div>Docs: <a href="https://docs.openclaw.ai" target="_blank" style="color:var(--accent)">docs.openclaw.ai</a></div>
+            <div>Tools: <a href="https://docs.openclaw.ai/tools" target="_blank" style="color:var(--accent)">docs.openclaw.ai/tools</a></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONFIG — update PASSCODE_HASH to sha256 of your passcode
+  // To generate: open browser console, run: await sha256('your-passcode')
+  //
+  // Default passcode: "OpenClaw2026"
+  // ─────────────────────────────────────────────────────────────────────────
+  const PASSCODE_HASH = '6289f0b932e7bcc5b2c5ed447bbee99fde9e2f156fd15bfd7ddc6d0edf3161e7';
+  const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+  const STORAGE_KEY = 'oc_hub_session';
+  const GW_REQUEST_TIMEOUT_MS = 30_000; // timeout per gateway request
+  const LOG_BUFFER_MAX = 1000; // max log lines to keep in memory
+  const LOG_BUFFER_TRIM = 800; // trim to this many when exceeding max
+  const DEFAULT_GW_URL = 'ws://localhost:18789';
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SHA-256 helper
+  // ─────────────────────────────────────────────────────────────────────────
+  async function sha256(str) {
+    const enc = new TextEncoder().encode(str);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Make sha256 available globally so users can compute passcode hashes in console
+  window.sha256 = sha256;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Auth
+  // ─────────────────────────────────────────────────────────────────────────
+  function isUnlocked() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const session = JSON.parse(raw);
+      if (!session || session.hash !== PASSCODE_HASH) return false;
+      if (Date.now() - session.ts > SESSION_TTL_MS) { localStorage.removeItem(STORAGE_KEY); return false; }
+      return true;
+    } catch { return false; }
+  }
+
+  function storeSession() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ hash: PASSCODE_HASH, ts: Date.now() }));
+  }
+
+  async function checkPasscode() {
+    const input = document.getElementById('lock-input').value;
+    if (!input) { showLockError('Enter your passcode.'); return; }
+    const hash = await sha256(input);
+    if (hash === PASSCODE_HASH) {
+      storeSession();
+      showApp();
+    } else {
+      showLockError('Incorrect passcode. Try again.');
+      document.getElementById('lock-input').value = '';
+      document.getElementById('lock-input').focus();
+    }
+  }
+
+  function lockApp() {
+    localStorage.removeItem(STORAGE_KEY);
+    disconnectGateway();
+    document.getElementById('app').classList.remove('visible');
+    document.getElementById('lock-screen').style.display = 'flex';
+    document.getElementById('lock-input').value = '';
+    setTimeout(() => document.getElementById('lock-input').focus(), 50);
+  }
+
+  function showLockError(msg) {
+    const el = document.getElementById('lock-error');
+    el.textContent = msg;
+    setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+  }
+
+  function showApp() {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    initApp();
+  }
+
+  // Enter key on lock screen
+  document.getElementById('lock-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkPasscode();
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Gateway WebSocket Client
+  // ─────────────────────────────────────────────────────────────────────────
+  let ws = null;
+  let wsConnected = false;
+  let wsPending = new Map();
+  // Use a counter combined with a page-unique prefix to avoid reuse on reconnect
+  let wsReqCounter = 0;
+  const wsReqPrefix = Math.random().toString(36).slice(2, 8);
+  let wsReconnectTimer = null;
+  let wsBackoff = 800;
+  let wsConnectSent = false;
+  let wsNonce = null;
+  let gatewaySettings = { url: '', token: '' };
+
+  function loadGatewaySettings() {
+    try {
+      const raw = localStorage.getItem('oc_hub_gw');
+      if (raw) {
+        const s = JSON.parse(raw);
+        gatewaySettings = { url: s.url || '', token: s.token || '' };
+      }
+    } catch {}
+  }
+
+  function saveGatewaySettingsToStorage() {
+    localStorage.setItem('oc_hub_gw', JSON.stringify(gatewaySettings));
+  }
+
+  function connectGateway(url, token) {
+    if (ws) { ws.close(); ws = null; }
+    if (!url) return;
+    gatewaySettings = { url, token: token || '' };
+    saveGatewaySettingsToStorage();
+    openWs(url, token);
+  }
+
+  function openWs(url, token) {
+    wsConnectSent = false;
+    wsNonce = null;
+    try {
+      ws = new WebSocket(url);
+    } catch (e) {
+      setConnStatus('error', 'Invalid URL: ' + e.message);
+      return;
+    }
+    setConnStatus('connecting', 'Connecting…');
+    ws.onopen = () => {
+      wsBackoff = 800;
+    };
+    ws.onmessage = (ev) => handleWsMessage(ev.data);
+    ws.onclose = (ev) => {
+      wsConnected = false;
+      setConnStatus('error', 'Disconnected');
+      flushPending(new Error('gateway closed'));
+      // Auto-reconnect
+      const delay = wsBackoff;
+      wsBackoff = Math.min(wsBackoff * 1.7, 15000);
+      wsReconnectTimer = setTimeout(() => {
+        if (gatewaySettings.url) openWs(gatewaySettings.url, gatewaySettings.token);
+      }, delay);
+    };
+    ws.onerror = () => {};
+  }
+
+  function handleWsMessage(raw) {
+    let frame;
+    try { frame = JSON.parse(raw); } catch { return; }
+    if (frame.type === 'event') {
+      if (frame.event === 'connect.challenge') {
+        wsNonce = frame.payload?.nonce ?? null;
+        sendWsConnect(gatewaySettings.token);
+        return;
+      }
+      handleGatewayEvent(frame);
+      return;
+    }
+    if (frame.type === 'hello-ok') {
+      wsConnected = true;
+      setConnStatus('connected', 'Connected');
+      toast('Gateway connected ✓', 'ok');
+      refreshAll();
+      startLogTail();
+      return;
+    }
+    if (frame.type === 'hello-fail') {
+      wsConnected = false;
+      setConnStatus('error', 'Auth failed: ' + (frame.reason ?? 'unknown'));
+      toast('Auth failed: ' + (frame.reason ?? 'unknown'), 'error');
+      return;
+    }
+    if (frame.type === 'res') {
+      const pending = wsPending.get(frame.id);
+      if (pending) {
+        wsPending.delete(frame.id);
+        if (frame.ok) pending.resolve(frame.payload);
+        else pending.reject(new Error(frame.error?.message ?? 'request failed'));
+      }
+    }
+  }
+
+  function sendWsConnect(token) {
+    if (wsConnectSent || !ws || ws.readyState !== WebSocket.OPEN) return;
+    wsConnectSent = true;
+    const msg = {
+      type: 'connect',
+      version: 1,
+      role: 'operator',
+      scopes: ['operator.admin', 'operator.approvals', 'operator.pairing'],
+    };
+    if (token) msg.token = token;
+    if (wsNonce) msg.nonce = wsNonce;
+    ws.send(JSON.stringify(msg));
+  }
+
+  function gwRequest(method, params) {
+    return new Promise((resolve, reject) => {
+      if (!ws || ws.readyState !== WebSocket.OPEN || !wsConnected) {
+        reject(new Error('Not connected'));
+        return;
+      }
+      const id = `${wsReqPrefix}_${++wsReqCounter}`;
+      wsPending.set(id, { resolve, reject });
+      ws.send(JSON.stringify({ type: 'req', id, method, params: params ?? {} }));
+      // Timeout
+      setTimeout(() => {
+        if (wsPending.has(id)) {
+          wsPending.delete(id);
+          reject(new Error('Request timed out'));
+        }
+      }, GW_REQUEST_TIMEOUT_MS);
+    });
+  }
+
+  function flushPending(err) {
+    for (const [, p] of wsPending) p.reject(err);
+    wsPending.clear();
+  }
+
+  function disconnectGateway() {
+    clearTimeout(wsReconnectTimer);
+    wsBackoff = 800;
+    if (ws) { ws.close(); ws = null; }
+    wsConnected = false;
+    setConnStatus('disconnected', 'Disconnected');
+  }
+
+  function handleGatewayEvent(frame) {
+    appendLog({ level: 'info', msg: `[event] ${frame.event}`, ts: Date.now() });
+    addActivityItem(frame.event, JSON.stringify(frame.payload ?? '').slice(0, 80));
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Connection status UI
+  // ─────────────────────────────────────────────────────────────────────────
+  function setConnStatus(state, label) {
+    const dot = document.getElementById('conn-dot');
+    const lbl = document.getElementById('conn-label');
+    const statusEl = document.getElementById('settings-conn-status');
+    dot.className = 'conn-dot ' + state;
+    lbl.textContent = label;
+    if (statusEl) {
+      const colorMap = { connected: 'var(--ok)', error: 'var(--danger)', connecting: 'var(--warn)', disconnected: 'var(--muted)' };
+      statusEl.style.color = colorMap[state] || 'var(--muted)';
+      statusEl.textContent = label;
+    }
+    if (state === 'connected') {
+      document.getElementById('stat-status').textContent = '✓ Online';
+      document.getElementById('stat-status').style.color = 'var(--ok)';
+    } else if (state === 'error') {
+      document.getElementById('stat-status').textContent = '✗ Offline';
+      document.getElementById('stat-status').style.color = 'var(--danger)';
+    } else if (state === 'connecting') {
+      document.getElementById('stat-status').textContent = '⟳ Connecting';
+      document.getElementById('stat-status').style.color = 'var(--warn)';
+    } else {
+      document.getElementById('stat-status').textContent = '— Disconnected';
+      document.getElementById('stat-status').style.color = 'var(--muted)';
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Tab navigation
+  // ─────────────────────────────────────────────────────────────────────────
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+    const tab = document.getElementById('tab-' + name);
+    if (tab) tab.classList.add('active');
+    const btn = document.querySelector(`[data-tab="${name}"]`);
+    if (btn) btn.classList.add('active');
+    if (name === 'agents') loadAgents();
+    if (name === 'sessions') loadSessions();
+    if (name === 'cron') loadCron();
+    if (name === 'logs') startLogTail();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Settings
+  // ─────────────────────────────────────────────────────────────────────────
+  function saveSettings() {
+    const url = document.getElementById('settings-gateway-url').value.trim();
+    const token = document.getElementById('settings-token').value.trim();
+    if (!url) { toast('Enter a gateway URL', 'error'); return; }
+    connectGateway(url, token);
+    toast('Connecting to gateway…', 'info');
+  }
+
+  function testConnection() {
+    if (!wsConnected) { toast('Not connected — save settings first', 'error'); return; }
+    gwRequest('health', {}).then(r => {
+      toast('Health OK: ' + JSON.stringify(r).slice(0, 60), 'ok');
+    }).catch(e => toast('Health check failed: ' + e.message, 'error'));
+  }
+
+  function saveDashboardSettings() {
+    const interval = parseInt(document.getElementById('settings-poll-interval').value) || 30;
+    const autoRefresh = document.getElementById('settings-auto-refresh').value === '1';
+    localStorage.setItem('oc_hub_prefs', JSON.stringify({ pollInterval: interval, autoRefresh }));
+    toast('Preferences saved', 'ok');
+    setupPolling();
+  }
+
+  function loadPreferences() {
+    try {
+      const raw = localStorage.getItem('oc_hub_prefs');
+      if (!raw) return { pollInterval: 30, autoRefresh: true };
+      return JSON.parse(raw);
+    } catch { return { pollInterval: 30, autoRefresh: true }; }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Data loading
+  // ─────────────────────────────────────────────────────────────────────────
+  async function refreshAll() {
+    if (!wsConnected) return;
+    await Promise.allSettled([loadAgents(), loadSessions(), loadCron(), loadHealth()]);
+  }
+
+  async function loadHealth() {
+    try {
+      const health = await gwRequest('health', {});
+      renderHealth(health);
+    } catch (e) {
+      document.getElementById('overview-health').innerHTML =
+        `<div class="empty-state" style="padding:20px"><div class="empty-msg text-danger">${escHtml(e.message)}</div></div>`;
+    }
+  }
+
+  function renderHealth(health) {
+    if (!health) return;
+    const items = Object.entries(health).map(([k, v]) => {
+      let badge = 'badge-ok';
+      if (typeof v === 'string' && (v.includes('error') || v.includes('fail'))) badge = 'badge-danger';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px">${escHtml(k)}</span>
+        <span class="badge ${badge}">${escHtml(String(v)).slice(0,40)}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('overview-health').innerHTML = items || '<div class="text-muted" style="padding:8px;font-size:13px">No health data</div>';
+  }
+
+  let agentsData = [];
+
+  async function loadAgents() {
+    if (!wsConnected) return;
+    try {
+      const res = await gwRequest('agents.list', {});
+      agentsData = res?.agents ?? [];
+      renderAgents(agentsData, res?.defaultId);
+      // Update stats
+      document.getElementById('stat-agents').textContent = agentsData.length;
+      const count = agentsData.length;
+      const badge = document.getElementById('nav-agents-count');
+      if (count > 0) { badge.style.display = ''; badge.textContent = count; }
+      else { badge.style.display = 'none'; }
+      // Populate task agent select
+      const sel = document.getElementById('task-agent');
+      sel.innerHTML = '<option value="">Select agent…</option>';
+      agentsData.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.identity?.name || a.name || a.id;
+        sel.appendChild(opt);
+      });
+    } catch (e) {
+      document.getElementById('agents-list').innerHTML =
+        `<div class="empty-state"><div class="empty-msg text-danger">${escHtml(e.message)}</div></div>`;
+    }
+  }
+
+  function renderAgents(agents, defaultId) {
+    const mainAgent = agents.find(a => a.id === defaultId) || agents.find(a => a.id === 'main') || agents[0];
+    const others = agents.filter(a => a !== mainAgent);
+
+    // Main agent card
+    const mainEl = document.getElementById('agents-main');
+    if (mainAgent) {
+      mainEl.innerHTML = renderAgentCard(mainAgent, true);
+    } else {
+      mainEl.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-msg">No main agent configured</div></div>';
+    }
+
+    // Other agents
+    const listEl = document.getElementById('agents-list');
+    if (others.length === 0) {
+      listEl.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-msg">No sub-agents configured</div></div>';
+    } else {
+      listEl.innerHTML = others.map(a => renderAgentCard(a, false)).join('');
+    }
+
+    // Overview hierarchy
+    renderHierarchy(agents, defaultId);
+  }
+
+  function renderAgentCard(agent, isMain) {
+    const name = agent.identity?.name || agent.name || agent.id;
+    const emoji = agent.identity?.emoji || (isMain ? '🧠' : '🤖');
+    const model = agent.model?.primary || (typeof agent.model === 'string' ? agent.model : null) || '–';
+    const bindings = agent.bindings || 0;
+    const role = isMain ? 'badge-accent' : 'badge-teal';
+    const roleLabel = isMain ? 'Orchestrator' : 'Sub-Agent';
+    return `<div class="agent-card">
+      <div class="agent-avatar">${emoji}</div>
+      <div class="agent-info">
+        <div class="agent-name">${escHtml(name)}</div>
+        <div class="agent-id">${escHtml(agent.id)}</div>
+        <div class="agent-meta">
+          <span class="badge ${role}">${roleLabel}</span>
+          <span class="badge badge-muted">🔗 ${bindings} bindings</span>
+          ${model !== '–' ? `<span class="badge badge-info">${escHtml(model)}</span>` : ''}
+        </div>
+      </div>
+      <div class="agent-actions">
+        <button class="btn btn-secondary btn-sm agent-quick-task-btn" data-agent-id="${escHtml(agent.id)}">⚡ Task</button>
+      </div>
+    </div>`;
+  }
+
+  function renderHierarchy(agents, defaultId) {
+    const mainAgent = agents.find(a => a.id === defaultId) || agents[0];
+    const others = agents.filter(a => a !== mainAgent);
+    if (!mainAgent) {
+      document.getElementById('overview-hierarchy').innerHTML =
+        '<div class="empty-state" style="padding:20px"><div class="empty-msg">No agents configured</div></div>';
+      return;
+    }
+    const emoji = mainAgent.identity?.emoji || '🧠';
+    const name = mainAgent.identity?.name || mainAgent.name || mainAgent.id;
+    let html = `<div class="hierarchy-node">
+      <div class="agent-card" style="margin-bottom:0">
+        <div class="agent-avatar">${emoji}</div>
+        <div class="agent-info">
+          <div class="agent-name">${escHtml(name)}</div>
+          <div class="agent-id">${escHtml(mainAgent.id)}</div>
+          <div class="agent-meta"><span class="badge badge-accent">Main Orchestrator</span></div>
+        </div>
+      </div>`;
+    if (others.length > 0) {
+      html += `<div class="children">`;
+      html += others.map(a => {
+        const n = a.identity?.name || a.name || a.id;
+        const em = a.identity?.emoji || '🤖';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:18px">${em}</span>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text-strong)">${escHtml(n)}</div>
+            <div class="mono" style="font-size:11px;color:var(--muted)">${escHtml(a.id)}</div>
+          </div>
+          <span class="badge badge-teal ml-auto">Sub-Agent</span>
+        </div>`;
+      }).join('');
+      html += `</div>`;
+    }
+    html += `</div>`;
+    document.getElementById('overview-hierarchy').innerHTML = html;
+  }
+
+  async function loadSessions() {
+    if (!wsConnected) return;
+    try {
+      const res = await gwRequest('sessions.list', { kinds: ['agent', 'main'], limit: 50 });
+      const sessions = res?.sessions ?? res ?? [];
+      document.getElementById('stat-sessions').textContent = Array.isArray(sessions) ? sessions.length : '–';
+      renderSessions(Array.isArray(sessions) ? sessions : []);
+    } catch (e) {
+      document.getElementById('sessions-list').innerHTML =
+        `<div class="empty-state"><div class="empty-msg text-danger">${escHtml(e.message)}</div></div>`;
+    }
+  }
+
+  function renderSessions(sessions) {
+    const active = sessions.filter(s => s.active || s.status === 'active');
+    const all = sessions;
+
+    const activeEl = document.getElementById('sessions-active');
+    const listEl = document.getElementById('sessions-list');
+
+    if (active.length === 0) {
+      activeEl.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-msg">No active sessions</div></div>';
+    } else {
+      activeEl.innerHTML = active.map(s => renderSessionRow(s, true)).join('');
+    }
+
+    if (all.length === 0) {
+      listEl.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-msg">No sessions found</div></div>';
+    } else {
+      listEl.innerHTML = all.map(s => renderSessionRow(s, false)).join('');
+    }
+
+    // Update agents sessions tab
+    const byAgent = {};
+    all.forEach(s => {
+      const agent = s.agentId || parseAgentFromSessionKey(s.key || s.sessionKey || '');
+      if (agent) { (byAgent[agent] = byAgent[agent] || []).push(s); }
+    });
+    const agentSessionsEl = document.getElementById('agents-sessions');
+    if (Object.keys(byAgent).length === 0) {
+      agentSessionsEl.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-msg">No sessions</div></div>';
+    } else {
+      agentSessionsEl.innerHTML = Object.entries(byAgent).map(([agentId, sessions]) =>
+        `<div style="margin-bottom:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--text-strong);margin-bottom:8px">🤖 ${escHtml(agentId)}</div>
+          ${sessions.slice(0,5).map(s => renderSessionRow(s, false)).join('')}
+        </div>`
+      ).join('');
+    }
+  }
+
+  function renderSessionRow(s, showBadge) {
+    const key = s.key || s.sessionKey || s.id || '';
+    const preview = s.preview || s.lastMessage || '';
+    const ts = s.updatedAt || s.createdAt || s.lastMessageAt;
+    const timeStr = ts ? relativeTime(ts) : '';
+    return `<div class="session-row">
+      <span class="session-key">${escHtml(key)}</span>
+      ${showBadge ? '<span class="badge badge-ok">Active</span>' : ''}
+      <span class="session-preview">${escHtml(preview)}</span>
+      ${timeStr ? `<span class="text-muted" style="font-size:11px;flex-shrink:0">${timeStr}</span>` : ''}
+    </div>`;
+  }
+
+  function parseAgentFromSessionKey(key) {
+    const m = key.match(/^agent:([^:]+)/);
+    return m ? m[1] : null;
+  }
+
+  async function loadCron() {
+    if (!wsConnected) return;
+    try {
+      const res = await gwRequest('cron.list', {});
+      const jobs = res?.jobs ?? res ?? [];
+      document.getElementById('stat-cron').textContent = Array.isArray(jobs) ? jobs.length : '–';
+      renderCron(Array.isArray(jobs) ? jobs : []);
+    } catch (e) {
+      document.getElementById('cron-list').innerHTML =
+        `<div class="empty-state"><div class="empty-msg text-danger">${escHtml(e.message)}</div></div>`;
+    }
+  }
+
+  function renderCron(jobs) {
+    const el = document.getElementById('cron-list');
+    if (jobs.length === 0) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">⏱️</div><div class="empty-msg">No cron jobs configured</div></div>';
+      return;
+    }
+    el.innerHTML = `<table class="data-table">
+      <thead><tr>
+        <th>Schedule</th><th>Task</th><th>Agent</th><th>Last Run</th><th>Next Run</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${jobs.map(j => `<tr>
+          <td><span class="cron-expr">${escHtml(j.schedule || j.cron || '–')}</span></td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(j.task || j.prompt || j.message || '–')}</td>
+          <td><span class="badge badge-teal">${escHtml(j.agentId || j.agent || 'main')}</span></td>
+          <td class="text-muted" style="font-size:12px">${j.lastRunAt ? relativeTime(j.lastRunAt) : '–'}</td>
+          <td class="text-muted" style="font-size:12px">${j.nextRunAt ? relativeTime(j.nextRunAt) : '–'}</td>
+          <td>
+            <button class="btn btn-secondary btn-sm cron-run-btn" data-job-id="${escHtml(j.id || '')}">▶ Run</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  async function addCronJob() {
+    if (!wsConnected) { toast('Not connected', 'error'); return; }
+    const schedule = document.getElementById('cron-schedule').value.trim();
+    const task = document.getElementById('cron-task').value.trim();
+    const agent = document.getElementById('cron-agent').value.trim() || 'main';
+    if (!schedule || !task) { toast('Schedule and task are required', 'error'); return; }
+    try {
+      await gwRequest('cron.add', { schedule, task, agentId: agent });
+      toast('Cron job added', 'ok');
+      document.getElementById('cron-schedule').value = '';
+      document.getElementById('cron-task').value = '';
+      await loadCron();
+    } catch (e) { toast('Failed: ' + e.message, 'error'); }
+  }
+
+  async function runCronNow(jobId) {
+    if (!jobId) { toast('No job ID', 'error'); return; }
+    try {
+      await gwRequest('cron.status', { jobId });
+      toast('Triggered cron job ' + jobId, 'ok');
+    } catch (e) { toast('Failed: ' + e.message, 'error'); }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Task running
+  // ─────────────────────────────────────────────────────────────────────────
+  let taskHistory = [];
+
+  function quickTask(agentId) {
+    showTab('tasks');
+    document.getElementById('task-agent').value = agentId;
+    document.getElementById('task-message').focus();
+  }
+
+  async function sendTask() {
+    if (!wsConnected) { toast('Not connected to gateway', 'error'); return; }
+    const agentId = document.getElementById('task-agent').value;
+    const message = document.getElementById('task-message').value.trim();
+    const model = document.getElementById('task-model').value.trim() || undefined;
+    const thinking = document.getElementById('task-thinking').value || undefined;
+    if (!message) { toast('Enter a task message', 'error'); return; }
+
+    const btn = document.getElementById('task-send-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Running…';
+
+    const taskEl = document.getElementById('task-result-card');
+    const outputEl = document.getElementById('task-result-output');
+    const statusEl = document.getElementById('task-result-status');
+    taskEl.style.display = 'block';
+    outputEl.textContent = '⏳ Running task…\n';
+    statusEl.className = 'badge badge-warn';
+    statusEl.textContent = 'Running';
+
+    const historyItem = {
+      id: Date.now(),
+      agent: agentId || 'default',
+      message: message.slice(0, 80),
+      status: 'running',
+      ts: Date.now(),
+    };
+    taskHistory.unshift(historyItem);
+    renderTaskHistory();
+
+    const params = { message };
+    if (agentId) params.agentId = agentId;
+    if (model) params.model = model;
+    if (thinking) params.thinking = thinking;
+
+    try {
+      const res = await gwRequest('chat', params);
+      const text = res?.text || res?.content || res?.message || JSON.stringify(res);
+      outputEl.textContent = text;
+      statusEl.className = 'badge badge-ok';
+      statusEl.textContent = 'Done';
+      historyItem.status = 'done';
+      historyItem.result = text.slice(0, 120);
+      toast('Task completed', 'ok');
+    } catch (e) {
+      outputEl.textContent = '❌ Error: ' + e.message;
+      statusEl.className = 'badge badge-danger';
+      statusEl.textContent = 'Error';
+      historyItem.status = 'error';
+      historyItem.error = e.message;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '⚡ Send Task';
+      renderTaskHistory();
+    }
+  }
+
+  function clearTaskResult() {
+    document.getElementById('task-result-card').style.display = 'none';
+    document.getElementById('task-result-output').textContent = '';
+    document.getElementById('task-message').value = '';
+  }
+
+  function clearTaskHistory() {
+    taskHistory = [];
+    renderTaskHistory();
+  }
+
+  function renderTaskHistory() {
+    const el = document.getElementById('task-history');
+    if (taskHistory.length === 0) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">⚡</div><div class="empty-msg">No tasks run yet this session</div></div>';
+      return;
+    }
+    el.innerHTML = taskHistory.slice(0, 20).map(t => {
+      const statusClass = { running: 'running', done: 'done', error: 'error', pending: 'pending' }[t.status] || 'pending';
+      const badgeClass = { running: 'badge-warn', done: 'badge-ok', error: 'badge-danger' }[t.status] || 'badge-muted';
+      return `<div class="task-item">
+        <div class="task-dot ${statusClass}"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span class="badge badge-teal">${escHtml(t.agent)}</span>
+            <span class="badge ${badgeClass}">${t.status}</span>
+            <span class="text-muted" style="font-size:11px;margin-left:auto">${relativeTime(t.ts)}</span>
+          </div>
+          <div style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.message)}</div>
+          ${t.result ? `<div class="text-muted" style="font-size:12px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.result)}</div>` : ''}
+          ${t.error ? `<div style="font-size:12px;color:var(--danger);margin-top:4px">${escHtml(t.error)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Logs
+  // ─────────────────────────────────────────────────────────────────────────
+  let logLines = [];
+  let logFollow = true;
+  let logTailInterval = null;
+
+  function startLogTail() {
+    if (!wsConnected) return;
+    // Poll via logs.tail
+    if (logTailInterval) clearInterval(logTailInterval);
+    doLogTail();
+    logTailInterval = setInterval(doLogTail, 3000);
+  }
+
+  async function doLogTail() {
+    if (!wsConnected) return;
+    try {
+      const res = await gwRequest('logs.tail', { lines: 50 });
+      const lines = res?.lines ?? res ?? [];
+      if (Array.isArray(lines) && lines.length > 0) {
+        lines.forEach(l => {
+          if (typeof l === 'string') appendLog({ level: 'info', msg: l, ts: Date.now() });
+          else appendLog(l);
+        });
+      }
+    } catch {}
+  }
+
+  function appendLog(entry) {
+    logLines.push(entry);
+    if (logLines.length > LOG_BUFFER_MAX) logLines = logLines.slice(-LOG_BUFFER_TRIM);
+    renderLogLine(entry);
+  }
+
+  function renderLogLine(entry) {
+    const el = document.getElementById('log-viewer');
+    const levelFilter = document.getElementById('log-level').value;
+    const level = (entry.level || 'info').toLowerCase();
+    if (levelFilter && level !== levelFilter) return;
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    const ts = new Date(entry.ts || Date.now()).toLocaleTimeString();
+    const levelClass = { error: 'level-error', warn: 'level-warn', debug: 'level-debug' }[level] || 'level-info';
+    line.innerHTML = `<span class="ts">[${ts}] </span><span class="${levelClass}">[${level.toUpperCase()}]</span> ${escHtml(String(entry.msg || entry.message || ''))}`;
+    el.appendChild(line);
+    if (logFollow) el.scrollTop = el.scrollHeight;
+  }
+
+  function filterLogs() {
+    const el = document.getElementById('log-viewer');
+    const levelFilter = document.getElementById('log-level').value;
+    el.innerHTML = '';
+    logLines.forEach(entry => {
+      const level = (entry.level || 'info').toLowerCase();
+      if (levelFilter && level !== levelFilter) return;
+      renderLogLine(entry);
+    });
+  }
+
+  function clearLogs() {
+    logLines = [];
+    document.getElementById('log-viewer').innerHTML = '<div class="log-line text-muted">— Cleared —</div>';
+  }
+
+  function toggleLogFollow() {
+    logFollow = !logFollow;
+    const btn = document.getElementById('log-follow-btn');
+    btn.textContent = logFollow ? '📌 Following' : '📌 Follow';
+    btn.style.color = logFollow ? 'var(--accent)' : '';
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Recent activity
+  // ─────────────────────────────────────────────────────────────────────────
+  let activityItems = [];
+
+  function addActivityItem(event, detail) {
+    activityItems.unshift({ event, detail, ts: Date.now() });
+    if (activityItems.length > 20) activityItems = activityItems.slice(0, 20);
+    renderActivity();
+  }
+
+  function renderActivity() {
+    const el = document.getElementById('overview-activity');
+    if (activityItems.length === 0) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">📡</div><div class="empty-msg">No recent events</div></div>';
+      return;
+    }
+    el.innerHTML = activityItems.slice(0, 10).map(item => `
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span class="badge badge-info" style="flex-shrink:0;font-size:10px">${escHtml(item.event)}</span>
+        <span style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escHtml(item.detail)}</span>
+        <span style="font-size:11px;color:var(--muted);flex-shrink:0">${relativeTime(item.ts)}</span>
+      </div>
+    `).join('');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Tools Reference
+  // ─────────────────────────────────────────────────────────────────────────
+  const TOOLS_DATA = [
+    {
+      name: 'exec',
+      group: 'Runtime',
+      desc: 'Run shell commands in the workspace',
+      params: ['command (required)', 'yieldMs', 'background', 'timeout', 'elevated', 'host (sandbox|gateway|node)', 'security', 'ask', 'node', 'pty'],
+      notes: 'Returns status:"running" with a sessionId when backgrounded. Use process to poll/log/kill background sessions.',
+      profile: 'coding',
+    },
+    {
+      name: 'bash',
+      group: 'Runtime',
+      desc: 'Run a bash command (shorthand for exec)',
+      params: ['command (required)', 'timeout'],
+      notes: 'Alias for exec with shell=/bin/bash. Same approval and allowlist rules apply.',
+      profile: 'coding',
+    },
+    {
+      name: 'process',
+      group: 'Runtime',
+      desc: 'Manage background exec sessions',
+      params: ['list', 'poll', 'log (offset/limit)', 'write', 'kill', 'clear', 'remove'],
+      notes: 'Sessions are scoped per agent. poll returns new output and exit status when complete.',
+      profile: 'coding',
+    },
+    {
+      name: 'apply_patch',
+      group: 'Filesystem',
+      desc: 'Apply structured patches across one or more files',
+      params: ['patch (required)', 'workspaceOnly'],
+      notes: 'Enable via tools.exec.applyPatch.enabled. OpenAI models only.',
+      profile: 'coding',
+    },
+    {
+      name: 'read / write / edit',
+      group: 'Filesystem',
+      desc: 'Read and write files in the workspace',
+      params: ['path (required)', 'content', 'encoding'],
+      notes: 'Part of group:fs. Scoped to workspace directory by default.',
+      profile: 'coding',
+    },
+    {
+      name: 'web_search',
+      group: 'Web',
+      desc: 'Search the web using Brave Search API',
+      params: ['query (required)', 'count (1–10)'],
+      notes: 'Requires BRAVE_API_KEY. Enable via tools.web.search.enabled. Responses cached 15 min.',
+      profile: 'full',
+    },
+    {
+      name: 'web_fetch',
+      group: 'Web',
+      desc: 'Fetch and extract readable content from a URL',
+      params: ['url (required)', 'extractMode (markdown|text)', 'maxChars'],
+      notes: 'Enable via tools.web.fetch.enabled. For JS-heavy sites prefer the browser tool.',
+      profile: 'full',
+    },
+    {
+      name: 'browser',
+      group: 'UI',
+      desc: 'Control the OpenClaw-managed browser (Playwright)',
+      params: ['action (status|start|stop|tabs|open|snapshot|screenshot|act|navigate)', 'profile', 'target (sandbox|host|node)', 'node'],
+      notes: 'snapshot defaults to ai (Playwright) or aria. act requires ref from snapshot. Profile names: lowercase alphanumeric + hyphens.',
+      profile: 'full',
+    },
+    {
+      name: 'canvas',
+      group: 'UI',
+      desc: 'Drive the node Canvas (present, eval, snapshot, A2UI)',
+      params: ['action (present|hide|navigate|eval|snapshot|a2ui_push|a2ui_reset)', 'node'],
+      notes: 'Uses gateway node.invoke under the hood. A2UI is v0.8 only.',
+      profile: 'full',
+    },
+    {
+      name: 'image',
+      group: 'Media',
+      desc: 'Analyze an image with the configured image model',
+      params: ['image (required path or URL)', 'prompt', 'model', 'maxBytesMb'],
+      notes: 'Only available when agents.defaults.imageModel is configured.',
+      profile: 'coding',
+    },
+    {
+      name: 'nodes',
+      group: 'Nodes',
+      desc: 'Discover and target paired nodes; send notifications; capture camera/screen',
+      params: ['action (status|describe|pending|approve|reject|notify|run|camera_snap|camera_clip|screen_record|location_get)', 'node'],
+      notes: 'Camera/screen commands require the node app to be foregrounded.',
+      profile: 'full',
+    },
+    {
+      name: 'message',
+      group: 'Messaging',
+      desc: 'Send messages across Discord, Slack, Telegram, WhatsApp, Signal, iMessage, MS Teams',
+      params: ['action (send|poll|react|read|edit|delete|pin|thread-create|search)', 'channel', 'to', 'text', 'media'],
+      notes: 'send routes WhatsApp via Gateway; other channels go direct.',
+      profile: 'messaging',
+    },
+    {
+      name: 'cron',
+      group: 'Automation',
+      desc: 'Manage Gateway cron jobs and wakeups',
+      params: ['action (status|list|add|update|remove|run|runs|wake)', 'jobId', 'schedule', 'task'],
+      notes: 'add expects a full cron job object. update uses { jobId, patch }.',
+      profile: 'full',
+    },
+    {
+      name: 'gateway',
+      group: 'Automation',
+      desc: 'Restart or apply updates to the running Gateway process',
+      params: ['action (restart|config.get|config.schema|config.apply|config.patch|update.run)', 'delayMs'],
+      notes: 'restart is enabled by default. Use delayMs (default 2000) to avoid interrupting in-flight replies.',
+      profile: 'full',
+    },
+    {
+      name: 'sessions_list',
+      group: 'Sessions',
+      desc: 'List available sessions',
+      params: ['kinds?', 'limit?', 'activeMinutes?', 'messageLimit?'],
+      notes: 'main is the canonical direct-chat key. Session targeting controlled by tools.sessions.visibility.',
+      profile: 'messaging',
+    },
+    {
+      name: 'sessions_history',
+      group: 'Sessions',
+      desc: 'Inspect session transcript history',
+      params: ['sessionKey (or sessionId) (required)', 'limit?', 'includeTools?'],
+      notes: 'Returns message array. Tool messages filtered by default.',
+      profile: 'messaging',
+    },
+    {
+      name: 'sessions_send',
+      group: 'Sessions',
+      desc: 'Send a message to another session (ping-pong pattern)',
+      params: ['sessionKey (required)', 'message (required)', 'timeoutSeconds?'],
+      notes: 'timeoutSeconds=0 = fire-and-forget. Waits for completion when >0.',
+      profile: 'messaging',
+    },
+    {
+      name: 'sessions_spawn',
+      group: 'Sessions',
+      desc: 'Spawn a sub-agent run (non-blocking)',
+      params: ['task (required)', 'label?', 'agentId?', 'model?', 'runTimeoutSeconds?', 'cleanup?'],
+      notes: 'Non-blocking, returns status:"accepted" immediately. Sub-agent announces result back when done.',
+      profile: 'messaging',
+    },
+    {
+      name: 'session_status',
+      group: 'Sessions',
+      desc: 'Get status of current or specified session',
+      params: ['sessionKey?', 'model?'],
+      notes: 'model="default" clears model override. Available in all profiles.',
+      profile: 'minimal',
+    },
+    {
+      name: 'agents_list',
+      group: 'Sessions',
+      desc: 'List agent IDs available for sessions_spawn',
+      params: [],
+      notes: 'Restricted to per-agent allowlists (agents.list[].subagents.allowAgents).',
+      profile: 'messaging',
+    },
+    {
+      name: 'memory_search / memory_get',
+      group: 'Memory',
+      desc: 'Search or retrieve agent memory',
+      params: ['query (required for search)', 'id (required for get)'],
+      notes: 'Part of group:memory. Available in coding profile.',
+      profile: 'coding',
+    },
+  ];
+
+  function renderTools() {
+    const groups = {};
+    TOOLS_DATA.forEach(t => {
+      (groups[t.group] = groups[t.group] || []).push(t);
+    });
+    const el = document.getElementById('tools-list');
+    el.innerHTML = Object.entries(groups).map(([group, tools]) => `
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${escHtml(group)}</div>
+        ${tools.map(tool => renderToolCard(tool)).join('')}
+      </div>
+    `).join('');
+  }
+
+  function renderToolCard(tool) {
+    const profileBadge = {
+      minimal: 'badge-muted',
+      coding: 'badge-info',
+      messaging: 'badge-teal',
+      full: 'badge-accent',
+    }[tool.profile] || 'badge-muted';
+    return `<div class="tool-card" id="tool-${tool.name.replace(/[^a-z0-9]/gi,'-')}">
+      <div class="tool-header" onclick="toggleTool(this)">
+        <div>
+          <div class="tool-name">${escHtml(tool.name)}</div>
+          <div class="tool-desc">${escHtml(tool.desc)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge ${profileBadge}">${tool.profile}</span>
+          <span class="tool-chevron">▼</span>
+        </div>
+      </div>
+      <div class="tool-body">
+        ${tool.params.length > 0 ? `
+          <div style="margin-bottom:8px"><strong>Parameters:</strong>
+            <ul style="margin:4px 0 0 16px">
+              ${tool.params.map(p => `<li><code>${escHtml(p)}</code></li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+        ${tool.notes ? `<div style="color:var(--muted)">${escHtml(tool.notes)}</div>` : ''}
+        <div style="margin-top:10px">
+          <a href="https://docs.openclaw.ai/tools/${escHtml(tool.name.split(' ')[0])}" target="_blank" style="color:var(--accent);font-size:12px">
+            → View full documentation
+          </a>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function toggleTool(header) {
+    const card = header.closest('.tool-card');
+    card.classList.toggle('open');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Polling
+  // ─────────────────────────────────────────────────────────────────────────
+  let pollTimer = null;
+
+  function setupPolling() {
+    clearInterval(pollTimer);
+    const prefs = loadPreferences();
+    if (prefs.autoRefresh && wsConnected) {
+      pollTimer = setInterval(() => {
+        if (wsConnected) refreshAll();
+      }, (prefs.pollInterval || 30) * 1000);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Toast notifications
+  // ─────────────────────────────────────────────────────────────────────────
+  function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = msg;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Utilities
+  // ─────────────────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function relativeTime(ts) {
+    const diff = Date.now() - new Date(ts).getTime();
+    if (diff < 60000) return 'just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    return Math.floor(diff / 86400000) + 'd ago';
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Init
+  // ─────────────────────────────────────────────────────────────────────────
+  function initApp() {
+    loadGatewaySettings();
+    // Populate settings UI
+    document.getElementById('settings-gateway-url').value = gatewaySettings.url || DEFAULT_GW_URL;
+    document.getElementById('settings-token').value = gatewaySettings.token || '';
+    const prefs = loadPreferences();
+    document.getElementById('settings-poll-interval').value = prefs.pollInterval || 30;
+    document.getElementById('settings-auto-refresh').value = prefs.autoRefresh !== false ? '1' : '0';
+    // Render tools reference
+    renderTools();
+    // Event delegation for dynamically rendered buttons (avoids XSS from inline onclick)
+    document.body.addEventListener('click', e => {
+      const taskBtn = e.target.closest('.agent-quick-task-btn');
+      if (taskBtn) { quickTask(taskBtn.dataset.agentId); return; }
+      const cronBtn = e.target.closest('.cron-run-btn');
+      if (cronBtn) { runCronNow(cronBtn.dataset.jobId); return; }
+    });
+    // Auto-connect if URL saved
+    if (gatewaySettings.url) {
+      connectGateway(gatewaySettings.url, gatewaySettings.token);
+    }
+    // Setup polling
+    setupPolling();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Bootstrap
+  // ─────────────────────────────────────────────────────────────────────────
+  if (isUnlocked()) {
+    showApp();
+  } else {
+    document.getElementById('lock-screen').style.display = 'flex';
+    document.getElementById('app').classList.remove('visible');
+  }
+</script>
+</body>
+</html>
